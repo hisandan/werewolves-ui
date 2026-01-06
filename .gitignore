@@ -1,0 +1,25 @@
+# Virtual Environment
+venv/
+env/
+.env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+logs/
+*.log
+*.err
+
+# Node
+node_modules/
+
+# OS specific rules
+.DS_Store
+Thumbs.db
+
+# Editor configurations
+.vscode/
+.idea/

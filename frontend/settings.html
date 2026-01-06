@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Configuración LLM | Werewolf Arena</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/dark-atmosphere.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+
+<body class="night-theme">
+    <div class="background-layer">
+        <div class="stars"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <nav class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🐺</span>
+                <span class="logo-text">Werewolf Arena</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" data-i18n="nav_home">Inicio</a></li>
+                <!-- Game redirects to index now -->
+                <li><a href="index.html" data-i18n="nav_game">Arena</a></li>
+                <li><a href="settings.html" class="active" data-i18n="nav_settings">Configuración</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="settings-container">
+        <h1 class="page-title" data-i18n="settings_title">⚙️ Configuración de LLM</h1>
+        <p class="page-subtitle" data-i18n="settings_subtitle">Selecciona el proveedor de IA para los agentes</p>
+
+        <!-- Selector de proveedores -->
+        <section class="providers-section">
+            <div class="provider-cards">
+
+                <!-- LM Studio -->
+                <div class="provider-card" data-provider="lmstudio">
+                    <div class="provider-header">
+                        <span class="provider-icon">💻</span>
+                        <h2 class="provider-name">LM Studio</h2>
+                        <span class="provider-badge local">LOCAL</span>
+                    </div>
+                    <div class="provider-body">
+                        <p class="provider-desc">URL: http://localhost:1234/v1</p>
+                    </div>
+                </div>
+
+                <!-- Ollama -->
+                <div class="provider-card" data-provider="ollama">
+                    <div class="provider-header">
+                        <span class="provider-icon">🦙</span>
+                        <h2 class="provider-name">Ollama</h2>
+                        <span class="provider-badge local">LOCAL</span>
+                    </div>
+                    <div class="provider-body">
+                        <p class="provider-desc">URL: http://localhost:11434/v1</p>
+                    </div>
+                </div>
+
+                <!-- Google Gemini -->
+                <div class="provider-card" data-provider="gemini">
+                    <div class="provider-header">
+                        <span class="provider-icon">✨</span>
+                        <h2 class="provider-name">Gemini / Google</h2>
+                        <span class="provider-badge cloud">CLOUD</span>
+                    </div>
+                    <div class="provider-body">
+                        <p class="provider-desc">Google AI Studio</p>
+                    </div>
+                </div>
+
+                <!-- OpenRouter -->
+                <div class="provider-card" data-provider="openrouter">
+                    <div class="provider-header">
+                        <span class="provider-icon">🌐</span>
+                        <h2 class="provider-name">OpenRouter</h2>
+                        <span class="provider-badge cloud">CLOUD</span>
+                    </div>
+                    <div class="provider-body">
+                        <p class="provider-desc">API Gateway</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Configuración activa -->
+        <section class="current-config">
+            <h2>📝 Editar Configuración</h2>
+            <div class="config-form">
+                <input type="text" id="config-base-url" placeholder="API Base URL">
+                <input type="password" id="config-api-key" placeholder="API Key (si es necesaria)">
+                <input type="text" id="config-model" placeholder="Model Name (ej: gemini-1.5-flash)">
+                <button class="btn-primary" onclick="saveConfiguration()" data-i18n="btn_save">Guardar</button>
+            </div>
+        </section>
+
+    </main>
+    <script src="js/i18n.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+
+</html>

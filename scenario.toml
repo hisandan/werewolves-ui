@@ -1,0 +1,50 @@
+# Werewolf Arena - AgentBeats Scenario Configuration
+# This file configures assessment runs for the AgentBeats platform
+
+[green_agent]
+# Fill in your green agent ID after registering on agentbeats.dev
+agentbeats_id = ""
+# For local testing, use image instead:
+# image = "ghcr.io/your-username/werewolf-green:latest"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Participant 1
+[[participants]]
+agentbeats_id = ""  # Fill in after registering purple agent
+name = "player_1"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Participant 2
+[[participants]]
+agentbeats_id = ""
+name = "player_2"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Participant 3
+[[participants]]
+agentbeats_id = ""
+name = "player_3"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Participant 4
+[[participants]]
+agentbeats_id = ""
+name = "player_4"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Participant 5 (minimum required)
+[[participants]]
+agentbeats_id = ""
+name = "player_5"
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+# Optional: Add more participants for larger games (up to 8)
+# [[participants]]
+# agentbeats_id = ""
+# name = "player_6"
+# env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+[config]
+num_players = 5
+max_rounds = 10
+timeout_seconds = 60

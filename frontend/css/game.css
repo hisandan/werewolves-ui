@@ -1,0 +1,179 @@
+/* Game Interface Styles */
+.game-container {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    height: calc(100vh - 80px);
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.panel {
+    background: rgba(26, 26, 46, 0.9);
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.arena-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.arena-game {
+    width: 100%;
+    aspect-ratio: 1/1;
+    max-height: 600px;
+    margin: 0 auto;
+    position: relative;
+    border-radius: 50%;
+    background: radial-gradient(circle, #2a2a40 0%, transparent 70%);
+}
+
+.player-node {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    transform-origin: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.node-avatar {
+    width: 50px;
+    height: 50px;
+    background: #475569;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 2px solid #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.player-node[data-alive="false"] .node-avatar {
+    filter: grayscale(1);
+    opacity: 0.5;
+    border-color: #ef4444;
+}
+
+.player-node.speaking .node-avatar {
+    border-color: #6366f1;
+    box-shadow: 0 0 15px #6366f1;
+    animation: pulse-speak 1s infinite;
+}
+
+@keyframes pulse-speak {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 1.2rem;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.event-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+}
+
+.event {
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border-left: 3px solid #64748b;
+}
+
+.event-system {
+    border-color: #6366f1;
+}
+
+.event-death {
+    border-color: #ef4444;
+}
+
+.event-speak {
+    border-color: #10b981;
+}
+
+.terminal-mini {
+    background: #000;
+    color: #33ff33;
+    font-family: monospace;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    height: 150px;
+    overflow-y: auto;
+    border-radius: 5px;
+    margin-top: auto;
+}
+
+.victory-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.victory-content {
+    background: #1a1a2e;
+    padding: 3rem;
+    border-radius: 1rem;
+    text-align: center;
+    border: 2px solid #6366f1;
+    animation: modal-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modal-pop {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

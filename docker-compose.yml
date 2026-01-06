@@ -1,0 +1,117 @@
+# Werewolf Arena - Local Testing Configuration
+# Docker Compose for running a complete game locally
+
+version: "3.8"
+
+services:
+  # Green Agent - Game Evaluator
+  green-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.green
+    container_name: werewolf-green
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8000", "--card-url", "http://green-agent:8000"]
+    networks:
+      - werewolf-net
+    depends_on:
+      - purple-agent-1
+      - purple-agent-2
+      - purple-agent-3
+      - purple-agent-4
+      - purple-agent-5
+
+  # Purple Agent 1
+  purple-agent-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.purple
+    container_name: werewolf-purple-1
+    ports:
+      - "8001:8001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8001", "--card-url", "http://purple-agent-1:8001"]
+    networks:
+      - werewolf-net
+
+  # Purple Agent 2
+  purple-agent-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.purple
+    container_name: werewolf-purple-2
+    ports:
+      - "8002:8002"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8002", "--card-url", "http://purple-agent-2:8002"]
+    networks:
+      - werewolf-net
+
+  # Purple Agent 3
+  purple-agent-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.purple
+    container_name: werewolf-purple-3
+    ports:
+      - "8003:8003"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8003", "--card-url", "http://purple-agent-3:8003"]
+    networks:
+      - werewolf-net
+
+  # Purple Agent 4
+  purple-agent-4:
+    build:
+      context: .
+      dockerfile: Dockerfile.purple
+    container_name: werewolf-purple-4
+    ports:
+      - "8004:8004"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8004", "--card-url", "http://purple-agent-4:8004"]
+    networks:
+      - werewolf-net
+
+  # Purple Agent 5
+  purple-agent-5:
+    build:
+      context: .
+      dockerfile: Dockerfile.purple
+    container_name: werewolf-purple-5
+    ports:
+      - "8005:8005"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PYTHONUNBUFFERED=1
+    command: ["--host", "0.0.0.0", "--port", "8005", "--card-url", "http://purple-agent-5:8005"]
+    networks:
+      - werewolf-net
+
+networks:
+  werewolf-net:
+    driver: bridge

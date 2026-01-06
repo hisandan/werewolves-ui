@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Werewolf Arena</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/nav.css">
+</head>
+
+<body>
+    <header class="game-header">
+        <div class="logo">
+            <span>🐺</span> WEREWOLF ARENA
+        </div>
+
+        <!-- NEW: Navigation -->
+        <nav class="main-nav">
+            <a href="index.html" class="nav-link active">Arena</a>
+            <a href="settings.html" class="nav-link">Settings</a>
+        </nav>
+
+        <div class="phase-badge">
+            <span class="phase-icon">⏳</span>
+            <span id="phaseDisplay">WAITING</span>
+            <span class="round-badge">Round <span id="roundDisplay">-</span></span>
+        </div>
+    </header>
+
+    <div class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Social Deduction Lab</h1>
+
+            <div class="player-config">
+                <label>Agents</label>
+                <input type="number" id="playerCount" min="5" max="8" value="5">
+                <button id="startBtn" class="btn-primary">Initialize Simulation</button>
+            </div>
+
+            <!-- NEW: Game Status Panel -->
+            <div id="gameStatusPanel" class="status-panel hidden">
+                <div class="panel-section">
+                    <h3>🏆 Winner</h3>
+                    <div id="winnerDisplay">-</div>
+                </div>
+                <div class="panel-section">
+                    <h3>🎭 Role Reveal</h3>
+                    <div id="roleList" class="role-list">
+                        <!-- Roles populated at game over -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arena-section">
+            <div class="arena-game">
+                <!-- Javascript will distribute nodes in circle -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Left: System Logs -->
+    <div class="debug-terminal left-panel">
+        <div class="terminal-header">Simulation Events</div>
+        <div class="terminal-body" id="eventLog">
+            <div class="event event-system">System Ready.</div>
+        </div>
+    </div>
+
+    <!-- Right: Debate Logs -->
+    <div class="debug-terminal right-panel">
+        <div class="terminal-header">Agent Communication</div>
+        <div class="terminal-body debate-messages" id="debateLog">
+            <!-- Chat logs -->
+        </div>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+        // Simple Circular Layout Logic for Arena
+        function distributePlayers() {
+            const arena = document.querySelector('.arena-game');
+            const nodes = document.querySelectorAll('.player-node');
+            if (nodes.length === 0) return;
+
+            // Adjust radius based on count to keep it tight
+            const radius = 220;
+            const centerX = 300;
+            const centerY = 300;
+
+            nodes.forEach((node, index) => {
+                const angle = (index / nodes.length) * 2 * Math.PI - (Math.PI / 2);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                // Centering the node (60px width/height)
+                node.style.left = (x - 30) + 'px';
+                node.style.top = (y - 30) + 'px';
+            });
+        }
+
+        // Improve Game.js setupPlayers to call distribute
+        // We override after load to ensure Game class exists
+        window.addEventListener('load', () => {
+            if (window.game) {
+                const originalSetup = window.game.setupPlayers;
+                window.game.setupPlayers = function (names, roles) {
+                    // Call original binding explicitly
+                    WerewolfGame.prototype.setupPlayers.call(this, names, roles);
+                    distributePlayers();
+                };
+            }
+        });
+    </script>
+</body>
+
+</html>

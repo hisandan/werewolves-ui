@@ -1,0 +1,53 @@
+# Werewolf Arena - Green Agent Card
+# This file describes the evaluator agent for AgentBeats platform
+
+[agent]
+name = "Werewolf Arena Evaluator"
+description = """
+A multi-agent social deduction game evaluator that tests LLM agents' abilities in:
+- Social reasoning and deduction
+- Deception and persuasion
+- Coalition building and trust assessment
+- Strategic decision making under uncertainty
+
+Based on Google's Werewolf Arena benchmark (arxiv.org/abs/2407.13943).
+"""
+version = "1.0.0"
+url = "http://localhost:8000"
+
+[capabilities]
+roles = ["evaluator"]
+protocols = ["a2a"]
+
+[assessment]
+min_participants = 5
+max_participants = 8
+supported_roles = ["werewolf", "villager", "seer", "doctor"]
+
+[assessment.config]
+max_rounds = 10
+timeout_seconds = 60
+debate_turns = 5
+
+[scoring]
+metrics = [
+    "win_rate",
+    "survival_rate",
+    "deception_score",
+    "detection_score",
+    "influence_score",
+    "consistency_score",
+    "elo_rating"
+]
+
+[scoring.weights]
+win_rate = 0.30
+survival_rate = 0.15
+deception_score = 0.20
+detection_score = 0.20
+influence_score = 0.15
+consistency_score = 0.10
+
+[developer]
+github = "https://github.com/google/werewolf_arena"
+contact = ""
