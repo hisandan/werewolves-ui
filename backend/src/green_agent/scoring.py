@@ -13,7 +13,7 @@ import math
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
-from green_agent.models import RoleType, PlayerScore
+from green_agent.models import RoleType, PlayerScore, ParticipantResult
 
 
 @dataclass
@@ -97,9 +97,15 @@ class ScoringEngine:
     # ELO constants
     ELO_K_FACTOR = 32
     ELO_INITIAL = 1000
-    
+
     def __init__(self):
+        # General ELO ratings
         self.elo_ratings: Dict[str, float] = {}
+        # Role-specific ELO ratings
+        self.werewolf_elo: Dict[str, float] = {}
+        self.villager_elo: Dict[str, float] = {}
+        # Accumulated metrics per participant (for multi-game aggregation)
+        self.participant_stats: Dict[str, Dict[str, Any]] = {}
     
     def calculate_win_score(self, metrics: PlayerMetrics) -> float:
         """Calculate win-based score (0-1)."""
@@ -326,9 +332,180 @@ class ScoringEngine:
             team=metrics.team,
             won=metrics.won,
             survived=metrics.survived,
+            rounds_survived=metrics.rounds_survived,
             metrics=scores,
             elo_delta=elo_delta,
         )
+
+    def calculate_role_elo_delta(
+        self,
+        player_id: str,
+        team: str,
+        won: bool,
+        opponent_ratings: List[float],
+    ) -> float:
+        """Calculate ELO delta for role-specific rating."""
+        if team == "werewolves":
+            player_rating = self.werewolf_elo.get(player_id, self.ELO_INITIAL)
+        else:
+            player_rating = self.villager_elo.get(player_id, self.ELO_INITIAL)
+
+        if not opponent_ratings:
+            return 0.0
+
+        avg_opponent = sum(opponent_ratings) / len(opponent_ratings)
+        expected = 1.0 / (1.0 + math.pow(10, (avg_opponent - player_rating) / 400))
+        actual = 1.0 if won else 0.0
+        delta = self.ELO_K_FACTOR * (actual - expected)
+
+        return delta
+
+    def update_role_elo(self, player_id: str, team: str, delta: float) -> float:
+        """Update player's role-specific ELO rating."""
+        if team == "werewolves":
+            current = self.werewolf_elo.get(player_id, self.ELO_INITIAL)
+            new_rating = max(0, current + delta)
+            self.werewolf_elo[player_id] = new_rating
+        else:
+            current = self.villager_elo.get(player_id, self.ELO_INITIAL)
+            new_rating = max(0, current + delta)
+            self.villager_elo[player_id] = new_rating
+        return new_rating
+
+    def accumulate_player_stats(
+        self,
+        player_id: str,
+        metrics: PlayerMetrics,
+        scores: Dict[str, float],
+        total_rounds: int,
+    ) -> None:
+        """Accumulate stats for a player across multiple games."""
+        if player_id not in self.participant_stats:
+            self.participant_stats[player_id] = {
+                "games_played": 0,
+                "wins": 0,
+                "total_survival_rounds": 0,
+                "total_correct_votes": 0,
+                "total_votes": 0,
+                "total_influence": 0.0,
+                "total_consistency": 0.0,
+                "total_sabotage": 0.0,
+                # Werewolf stats
+                "games_as_werewolf": 0,
+                "werewolf_wins": 0,
+                "total_deception": 0.0,
+                "total_eliminations": 0,
+                # Villager stats
+                "games_as_villager": 0,
+                "villager_wins": 0,
+                "total_detection": 0.0,
+                "total_accusations": 0,
+                "successful_accusations": 0,
+                # Seer stats
+                "games_as_seer": 0,
+                "total_investigations": 0,
+                "correct_investigations": 0,
+                # Doctor stats
+                "games_as_doctor": 0,
+                "total_protections": 0,
+                "successful_protections": 0,
+            }
+
+        stats = self.participant_stats[player_id]
+        stats["games_played"] += 1
+        stats["wins"] += 1 if metrics.won else 0
+        stats["total_survival_rounds"] += metrics.rounds_survived
+        stats["total_correct_votes"] += metrics.correct_votes
+        stats["total_votes"] += metrics.total_votes
+        stats["total_influence"] += scores.get("influence_score", 0.0)
+        stats["total_consistency"] += scores.get("consistency_score", 0.0)
+        stats["total_sabotage"] += scores.get("sabotage_score", 0.0)
+
+        if metrics.team == "werewolves":
+            stats["games_as_werewolf"] += 1
+            stats["werewolf_wins"] += 1 if metrics.won else 0
+            stats["total_deception"] += scores.get("deception_score", 0.0)
+            stats["total_eliminations"] += metrics.eliminations_successful
+        else:
+            stats["games_as_villager"] += 1
+            stats["villager_wins"] += 1 if metrics.won else 0
+            stats["total_detection"] += scores.get("detection_score", 0.0)
+            stats["total_accusations"] += metrics.successful_accusations + metrics.failed_accusations
+            stats["successful_accusations"] += metrics.successful_accusations
+
+        if metrics.role == RoleType.SEER:
+            stats["games_as_seer"] += 1
+            stats["total_investigations"] += metrics.investigations_total
+            stats["correct_investigations"] += metrics.investigations_correct
+        elif metrics.role == RoleType.DOCTOR:
+            stats["games_as_doctor"] += 1
+            stats["total_protections"] += metrics.protections_total
+            stats["successful_protections"] += metrics.protections_successful
+
+    def generate_participant_result(self, player_id: str) -> ParticipantResult:
+        """Generate aggregated ParticipantResult for leaderboard queries."""
+        stats = self.participant_stats.get(player_id, {})
+        games = stats.get("games_played", 0)
+
+        if games == 0:
+            return ParticipantResult(participant=player_id)
+
+        # Calculate averages
+        werewolf_games = stats.get("games_as_werewolf", 0)
+        villager_games = stats.get("games_as_villager", 0)
+        total_votes = stats.get("total_votes", 0)
+
+        return ParticipantResult(
+            participant=player_id,
+            # General metrics
+            elo_rating=self.elo_ratings.get(player_id, self.ELO_INITIAL),
+            aggregate_score=(
+                stats.get("total_influence", 0) +
+                stats.get("total_consistency", 0) +
+                stats.get("total_deception", 0) +
+                stats.get("total_detection", 0)
+            ) / (games * 4) if games > 0 else 0.0,
+            games_played=games,
+            avg_survival_rounds=stats.get("total_survival_rounds", 0) / games if games > 0 else 0.0,
+            correct_vote_rate=stats.get("total_correct_votes", 0) / total_votes if total_votes > 0 else 0.0,
+            influence_score=stats.get("total_influence", 0) / games if games > 0 else 0.0,
+            consistency_score=stats.get("total_consistency", 0) / games if games > 0 else 0.0,
+            sabotage_penalty=stats.get("total_sabotage", 0) / games if games > 0 else 0.0,
+            # Werewolf metrics
+            werewolf_elo=self.werewolf_elo.get(player_id, self.ELO_INITIAL),
+            werewolf_win_rate=stats.get("werewolf_wins", 0) / werewolf_games if werewolf_games > 0 else 0.0,
+            deception_score=stats.get("total_deception", 0) / werewolf_games if werewolf_games > 0 else 0.0,
+            eliminations_per_game=stats.get("total_eliminations", 0) / werewolf_games if werewolf_games > 0 else 0.0,
+            games_as_werewolf=werewolf_games,
+            # Villager metrics
+            villager_elo=self.villager_elo.get(player_id, self.ELO_INITIAL),
+            villager_win_rate=stats.get("villager_wins", 0) / villager_games if villager_games > 0 else 0.0,
+            detection_score=stats.get("total_detection", 0) / villager_games if villager_games > 0 else 0.0,
+            accusation_accuracy=(
+                stats.get("successful_accusations", 0) / stats.get("total_accusations", 1)
+                if stats.get("total_accusations", 0) > 0 else 0.0
+            ),
+            games_as_villager=villager_games,
+            # Seer metrics
+            investigation_accuracy=(
+                stats.get("correct_investigations", 0) / stats.get("total_investigations", 1)
+                if stats.get("total_investigations", 0) > 0 else 0.0
+            ),
+            games_as_seer=stats.get("games_as_seer", 0),
+            # Doctor metrics
+            protection_success_rate=(
+                stats.get("successful_protections", 0) / stats.get("total_protections", 1)
+                if stats.get("total_protections", 0) > 0 else 0.0
+            ),
+            games_as_doctor=stats.get("games_as_doctor", 0),
+        )
+
+    def get_all_participant_results(self) -> List[ParticipantResult]:
+        """Generate ParticipantResult for all tracked participants."""
+        return [
+            self.generate_participant_result(player_id)
+            for player_id in self.participant_stats.keys()
+        ]
 
 
 def detect_sabotage(

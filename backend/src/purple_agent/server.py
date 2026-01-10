@@ -38,10 +38,10 @@ logger = logging.getLogger(__name__)
 
 class AppState:
     """Application state for the Purple Agent server."""
-    
+
     def __init__(self):
         self.host: str = "0.0.0.0"
-        self.port: int = 8001
+        self.port: int = 9010  # AgentBeats standard port for purple agent
         self.card_url: Optional[str] = None
         self.player: Optional[LLMPlayer] = None
         self.model: str = os.environ.get("LLM_MODEL", "gpt-4o-mini")
@@ -88,9 +88,8 @@ app = FastAPI(
 
 # ============ Agent Card Endpoint ============
 
-@app.get("/info")
-async def get_agent_info() -> Dict[str, Any]:
-    """Return the agent card describing this Purple Agent's capabilities."""
+def _build_agent_card() -> Dict[str, Any]:
+    """Build the agent card for this Purple Agent."""
     return {
         "name": "Werewolf Player Agent",
         "description": (
@@ -99,14 +98,37 @@ async def get_agent_info() -> Dict[str, Any]:
         ),
         "version": "1.0.0",
         "url": app_state.base_url,
+        "skills": [
+            {
+                "id": "werewolf-player",
+                "name": "Werewolf Game Player",
+                "description": "Plays roles in the Werewolf social deduction game (werewolf, villager, seer, doctor)",
+                "tags": ["game", "player", "social-deduction", "werewolf"],
+            }
+        ],
         "capabilities": {
+            "streaming": False,
             "roles": ["player"],
             "protocols": ["a2a"],
             "supported_game_roles": ["werewolf", "villager", "seer", "doctor"],
         },
+        "default_input_modes": ["text"],
+        "default_output_modes": ["text"],
         "model": app_state.model,
         "status": "ready" if app_state.player else "initializing",
     }
+
+
+@app.get("/.well-known/agent-card.json")
+async def get_agent_card() -> Dict[str, Any]:
+    """A2A standard endpoint for agent card discovery."""
+    return _build_agent_card()
+
+
+@app.get("/info")
+async def get_agent_info() -> Dict[str, Any]:
+    """Return the agent card describing this Purple Agent's capabilities."""
+    return _build_agent_card()
 
 
 # ============ A2A Endpoint ============
@@ -299,7 +321,7 @@ def main():
     """Main entry point for the Purple Agent server."""
     parser = argparse.ArgumentParser(description="Werewolf Arena Purple Agent")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=9010, help="Port to listen on (AgentBeats standard: 9010)")
     parser.add_argument("--card-url", help="URL to advertise in agent card")
     parser.add_argument("--model", default="gpt-4o-mini", help="LLM model to use")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
