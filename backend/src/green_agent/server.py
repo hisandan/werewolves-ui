@@ -16,6 +16,7 @@ import os
 import uuid
 import json
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
 import uvicorn
@@ -46,6 +47,24 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def is_running_in_docker() -> bool:
+    """Detect if we're running inside a Docker container."""
+    # Check for .dockerenv file or cgroup
+    return os.path.exists('/.dockerenv') or os.path.exists('/run/.containerenv')
+
+
+def get_agent_url(player_index: int) -> str:
+    """Get the correct URL for a purple agent based on environment."""
+    # Use AgentBeats standard port 9010 as base for purple agents
+    port = 9010 + player_index
+    if is_running_in_docker():
+        # Use Docker service names
+        return f"http://purple-agent-{player_index + 1}:{port}/a2a"
+    else:
+        # Use localhost for local development
+        return f"http://localhost:{port}/a2a"
+
+
 # ============ WebSocket Manager ============
 class ConnectionManager:
     def __init__(self):
@@ -70,10 +89,10 @@ class ConnectionManager:
 
 class AppState:
     """Application state for the Green Agent server."""
-    
+
     def __init__(self):
         self.host: str = "0.0.0.0"
-        self.port: int = 8000
+        self.port: int = 9009  # AgentBeats standard port for green agent
         self.card_url: Optional[str] = None
         self.active_assessments: Dict[str, GameOrchestrator] = {}
         self.completed_results: Dict[str, AssessmentResult] = {}
@@ -121,29 +140,50 @@ app.add_middleware(
 
 # ============ Agent Card Endpoint ============
 
-@app.get("/info")
-async def get_agent_info() -> Dict[str, Any]:
-    """Return the agent card describing this Green Agent's capabilities."""
-    card = AgentCard(
-        name="Werewolf Arena Evaluator",
-        description=(
+def _build_agent_card() -> Dict[str, Any]:
+    """Build the agent card for this Green Agent."""
+    return {
+        "name": "Werewolf Arena Evaluator",
+        "description": (
             "A multi-agent social deduction game evaluator. "
             "Tests LLM agents' ability to reason socially, deceive, detect deception, "
             "and collaborate in the classic Werewolf game."
         ),
-        version="1.0.0",
-        url=app_state.base_url,
-        capabilities=AgentCapabilities(
-            roles=["evaluator"],
-            protocols=["a2a"],
-        ),
-        assessment=AssessmentSpec(
-            min_participants=5,
-            max_participants=8,
-            supported_roles=["werewolf", "villager", "seer", "doctor"],
-        ),
-    )
-    return card.model_dump()
+        "version": "1.0.0",
+        "url": app_state.base_url,
+        "skills": [
+            {
+                "id": "werewolf-game",
+                "name": "Werewolf Game Evaluation",
+                "description": "Evaluates AI agents playing the Werewolf social deduction game",
+                "tags": ["game", "evaluation", "social-deduction", "multi-agent"],
+            }
+        ],
+        "capabilities": {
+            "streaming": False,
+            "roles": ["evaluator"],
+            "protocols": ["a2a"],
+        },
+        "default_input_modes": ["text"],
+        "default_output_modes": ["text", "data"],
+        "assessment": {
+            "min_participants": 5,
+            "max_participants": 8,
+            "supported_roles": ["werewolf", "villager", "seer", "doctor"],
+        },
+    }
+
+
+@app.get("/.well-known/agent-card.json")
+async def get_agent_card() -> Dict[str, Any]:
+    """A2A standard endpoint for agent card discovery."""
+    return _build_agent_card()
+
+
+@app.get("/info")
+async def get_agent_info() -> Dict[str, Any]:
+    """Return the agent card describing this Green Agent's capabilities."""
+    return _build_agent_card()
 
 
 # ============ A2A Endpoint ============
@@ -430,7 +470,7 @@ async def start_game_manual(request: StartGameRequest, background_tasks: Backgro
     
     # Generate participants based on count (1-based indexing)
     participants = {
-        f"Player_{i+1}": f"http://localhost:{8001+i}/a2a" for i in range(num_players)
+        f"Player_{i+1}": get_agent_url(i) for i in range(num_players)
     }
     
     params = {
@@ -461,9 +501,9 @@ async def start_game_simple(background_tasks: BackgroundTasks):
     # This is the one we will use
     request_id = f"manual_{uuid.uuid4().hex[:8]}"
     
-    # Defaults: 5 players local
+    # Defaults: 5 players
     participants = {
-        f"Player_{i}": f"http://localhost:{8001+i}/a2a" for i in range(5)
+        f"Player_{i+1}": get_agent_url(i) for i in range(5)
     }
     
     params = {
@@ -497,7 +537,7 @@ def main():
     """Main entry point for the Green Agent server."""
     parser = argparse.ArgumentParser(description="Werewolf Arena Green Agent")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=9009, help="Port to listen on (AgentBeats standard: 9009)")
     parser.add_argument("--card-url", help="URL to advertise in agent card")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     

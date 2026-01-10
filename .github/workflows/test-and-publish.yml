@@ -1,0 +1,179 @@
+# GitHub Actions workflow for testing and publishing Werewolf Arena Docker images
+# Based on AgentBeats template - tests before publishing to ensure quality
+
+name: Test and Publish Agents
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ============ Green Agent ============
+  test-and-publish-green:
+    name: Green Agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/green-agent
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.green
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          load: true
+          platforms: linux/amd64
+
+      - name: Start green agent container
+        env:
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          echo "$SECRETS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
+          docker run -d -p 9009:9009 --name green-agent-container --env-file .env \
+            $(echo "${{ steps.meta.outputs.tags }}" | head -n1) \
+            --host 0.0.0.0 --port 9009
+          # Wait for agent to be ready
+          timeout 60 bash -c 'until curl -sf http://localhost:9009/.well-known/agent-card.json > /dev/null; do sleep 2; done'
+
+      - name: Verify agent card
+        run: |
+          echo "=== Agent Card ==="
+          curl -s http://localhost:9009/.well-known/agent-card.json | jq .
+          echo ""
+          echo "=== Health Check ==="
+          curl -s http://localhost:9009/health | jq .
+
+      - name: Stop container and show logs
+        if: always()
+        run: |
+          echo "=== Green Agent Container Logs ==="
+          docker logs green-agent-container || true
+          docker stop green-agent-container || true
+
+      - name: Log in to GitHub Container Registry
+        if: success() && github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: success() && github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ github.repository }}/green-agent
+
+      - name: Output image info
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          echo "## Green Agent Published :wolf:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ github.repository }}/green-agent\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============ Purple Agent ============
+  test-and-publish-purple:
+    name: Purple Agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/purple-agent
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.purple
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          load: true
+          platforms: linux/amd64
+
+      - name: Start purple agent container
+        env:
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          echo "$SECRETS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
+          # Run with dummy model to avoid needing API keys for testing
+          docker run -d -p 9010:9010 --name purple-agent-container --env-file .env \
+            -e LLM_MODEL=dummy \
+            $(echo "${{ steps.meta.outputs.tags }}" | head -n1) \
+            --host 0.0.0.0 --port 9010
+          # Wait for agent to be ready
+          timeout 60 bash -c 'until curl -sf http://localhost:9010/.well-known/agent-card.json > /dev/null; do sleep 2; done'
+
+      - name: Verify agent card
+        run: |
+          echo "=== Agent Card ==="
+          curl -s http://localhost:9010/.well-known/agent-card.json | jq .
+          echo ""
+          echo "=== Health Check ==="
+          curl -s http://localhost:9010/health | jq .
+
+      - name: Stop container and show logs
+        if: always()
+        run: |
+          echo "=== Purple Agent Container Logs ==="
+          docker logs purple-agent-container || true
+          docker stop purple-agent-container || true
+
+      - name: Log in to GitHub Container Registry
+        if: success() && github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: success() && github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ github.repository }}/purple-agent
+
+      - name: Output image info
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          echo "## Purple Agent Published :video_game:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ github.repository }}/purple-agent\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY

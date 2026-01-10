@@ -124,24 +124,102 @@ class TaskUpdate(BaseModel):
 
 
 class PlayerScore(BaseModel):
-    """Individual player's score."""
+    """Individual player's score in a single game."""
     player_name: str
     role: RoleType
     team: str  # "werewolves" or "villagers"
     won: bool
     survived: bool
+    rounds_survived: int = 0
     metrics: Dict[str, float] = Field(default_factory=dict)
     elo_delta: Optional[float] = None
 
 
+class GameRecord(BaseModel):
+    """Record of a single game for transparency/audit."""
+    game_id: str
+    timestamp: str  # ISO format
+    werewolves: List[str]  # Agent IDs on werewolf team
+    villagers: List[str]  # Agent IDs on villager team
+    winner: str  # "werewolves" or "villagers"
+    rounds: int
+    scores: List[PlayerScore] = Field(default_factory=list)
+
+
+class ParticipantResult(BaseModel):
+    """Aggregated results for a single participant across all games.
+
+    This structure is designed for SQL queries in the leaderboard.
+    Fields match what's needed for:
+    - SELECT with UNNEST(results.results)
+    - ROW_NUMBER for best result per participant
+    - Filtering and ordering
+    """
+    # Identity
+    participant: str  # Agent name/ID
+
+    # General metrics
+    elo_rating: float = 1000.0
+    aggregate_score: float = 0.0  # Weighted overall score (0-1)
+    games_played: int = 0
+
+    # Individual performance metrics (role-agnostic)
+    avg_survival_rounds: float = 0.0
+    correct_vote_rate: float = 0.0  # % of votes against actual enemies
+    influence_score: float = 0.0  # How often others follow their vote
+    consistency_score: float = 0.0  # Logical consistency
+    sabotage_penalty: float = 0.0  # Penalty for team-harming actions
+
+    # Werewolf-specific metrics
+    werewolf_elo: float = 1000.0
+    werewolf_win_rate: float = 0.0
+    deception_score: float = 0.0  # Ability to avoid detection
+    eliminations_per_game: float = 0.0  # Successful kills as werewolf
+    games_as_werewolf: int = 0
+
+    # Villager-specific metrics
+    villager_elo: float = 1000.0
+    villager_win_rate: float = 0.0
+    detection_score: float = 0.0  # Ability to identify werewolves
+    accusation_accuracy: float = 0.0  # % of correct accusations
+    games_as_villager: int = 0
+
+    # Role-specific (Seer)
+    investigation_accuracy: float = 0.0
+    games_as_seer: int = 0
+
+    # Role-specific (Doctor)
+    protection_success_rate: float = 0.0
+    games_as_doctor: int = 0
+
+
 class AssessmentResult(BaseModel):
-    """Final assessment result artifact."""
+    """Final assessment result artifact.
+
+    Structure designed to support SQL queries for leaderboard:
+    - results: Array for UNNEST() in SQL
+    - games: Array for game history queries
+    - participants: Dict for accessing agent IDs (e.g., results.participants.werewolf_player)
+    """
     type: str = Field(default=MessageType.ASSESSMENT_RESULT)
     task_id: str
-    winner: str  # "werewolves" or "villagers"
+
+    # Summary
+    winner: str  # "werewolves" or "villagers" (for single game) or "mixed" (for multi-game)
     rounds_played: int
+
+    # Participants mapping (for SQL: results.participants.player_name)
+    participants: Dict[str, str] = Field(default_factory=dict)  # player_name -> agent_id
+
+    # Per-participant aggregated results (for SQL: UNNEST(results.results))
+    results: List[ParticipantResult] = Field(default_factory=list)
+
+    # Game history (for SQL: UNNEST(results.games))
+    games: List[GameRecord] = Field(default_factory=list)
+
+    # Legacy fields for backward compatibility
     game_log: List[Dict[str, Any]] = Field(default_factory=list)
-    scores: List[PlayerScore] = Field(default_factory=list)
+    scores: List[PlayerScore] = Field(default_factory=list)  # Single-game scores
     aggregate_metrics: Dict[str, float] = Field(default_factory=dict)
 
 
