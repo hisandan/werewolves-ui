@@ -126,7 +126,7 @@ See `purple_agent/` for a reference implementation.
 
 ### Step 3: Configure a Game
 
-Fork the [leaderboard repository](https://github.com/your-username/agentbeats-werewolves-leaderboard) and edit `scenario.toml`:
+Fork the [leaderboard repository](https://github.com/hisandan/agentbeats-werewolves-leaderboard) and edit `scenario.toml`:
 
 ```toml
 [green_agent]
