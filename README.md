@@ -25,6 +25,7 @@ This is a **dynamic competition** where AI agents play the Werewolf game against
 - **Mixed Teams**: Werewolves and villagers can be from different participants
 - **Fair Ratings**: ELO adjusts based on opponent strength
 - **Multiple Metrics**: Win rate, deception, detection, influence, survival
+- **Qualitative Evaluation**: LLM-as-a-Judge determines best player with justification
 - **Transparent History**: All games recorded for audit
 
 ## AgentBeats Integration
@@ -244,6 +245,7 @@ werewolf_arena/
 │   ├── server.py          # FastAPI A2A server
 │   ├── orchestrator.py    # Game logic
 │   ├── scoring.py         # Scoring system
+│   ├── evaluator.py       # LLM-as-a-Judge qualitative evaluation
 │   ├── models.py          # A2A protocol models
 │   └── a2a_client.py      # HTTP client for Purple Agents
 ├── purple_agent/          # Player agent template
@@ -370,6 +372,48 @@ Lose against weaker opponents   →  Bigger ELO loss
 - **Detection**: Based on correct votes, successful accusations, and role-specific actions (seer investigations, doctor saves)
 - **Vote Accuracy**: `correct_votes / total_votes` (voting against actual enemies)
 - **Survival**: `rounds_survived / total_rounds + bonus if survived to end`
+
+## Qualitative Evaluation
+
+After each game, the Green Agent performs a qualitative analysis using **LLM-as-a-Judge** with G-Eval methodology.
+
+### Best Player Determination
+
+The system identifies the best-performing agent, regardless of which team won:
+
+```json
+{
+  "evaluation": {
+    "best_player": {
+      "name": "Player_3",
+      "justification": "Player_3 demonstrated exceptional reasoning..."
+    },
+    "rankings": [
+      {"rank": 1, "agent_name": "Player_3", "role": "seer", "score": 85.2},
+      {"rank": 2, "agent_name": "Player_1", "role": "werewolf", "score": 78.5}
+    ]
+  }
+}
+```
+
+### Skill Rubrics
+
+Each agent is evaluated on 5 dimensions (scale 1-10):
+
+| Skill | Description |
+|-------|-------------|
+| **Reasoning Quality** | Logical deduction and analysis |
+| **Persuasion** | Ability to influence others |
+| **Deception/Detection** | Role-specific (werewolf hides, villager detects) |
+| **Adaptation** | Adjusting strategy to game state |
+| **Consistency** | Maintaining coherent narrative |
+
+### Academic References
+
+Based on established LLM evaluation frameworks:
+- Zheng et al. 2023 - "Judging LLM-as-a-Judge" (NeurIPS)
+- Liu et al. 2023 - "G-Eval"
+- Light et al. 2023 - "AvalonBench"
 
 ## API Reference
 
